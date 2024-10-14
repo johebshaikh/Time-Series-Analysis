@@ -1,0 +1,1073 @@
+---
+title: "Time series Project"
+author: "Group Conatus"
+date: "28/05/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Project Team Members
+
+* Vishal Atrolia (s3825276)
+* Joheb Shaikh (s3823492)
+* Ashwin Menon (s3808190)
+* Tarun Kumar (s3810681)
+* Amit Bhagate (s3825490)
+
+# Introduction
+
+American brewing history has seen numerous ups and downs, from the much obvious reasons like Prohibition to less visible, but equally crucial reasons like the introduction of refrigeration, which completely transformed the process of breweries in the United States. The nature of beer as a beverage is temperamental, as unlike wine and spirits it can not be stored for a long period of time. Due to various other reasons, the production of beer in the US has seen a lot of fluctuations over the period of time.
+
+As per the statistics, beer production market has seen a great peek in the late 1800s. In 1871, the United States had 4131 operational breweries. Going through the dark period of Prohibition, the number of operational breweries in 1970 which came down to as low as 89 by just 42 companies.
+
+Starting from 1970 the Beer market in The US started to rise slowly again, this was due to various reasons like the legalization of home production of beer etc. With the help of this project, we will try to analyze the production of beer in the US from 1970 t0 1977.
+
+# Analysis & Approach
+
+With the help of statistics, we will perform a time series analysis to observe interesting trends and patterns in the production of beer in the United States from the year 1970 to 1977.
+
+We will start with analyzing the Time series plot of the data and try to find out the factors like seasonality, changing variance in the data, and, further, we will try to deal with these factors affecting the pattern/plot. Finally, we will try to fit a SARIMA model to the data with proper diagnosis and interpretation.
+
+
+# Data
+* Source of the data- The data is taken from Census At School New Zealand website supported by A-stats NZ and The University Of Auckland.
+
+  URL- https://new.censusatschool.org.nz/explore/
+
+* The data has 96 observations and 2 variables, out of which variable "beerproductionusa" is our main variable of interest and the other variable is a monthly indicator.
+
+# Initial Setup
+
+## Required Libraries.
+
+```{r message=FALSE, warning=FALSE}
+
+library(tidyverse)
+library(TSA) 
+library(tseries)
+library(lmtest)
+library(forecast)
+```
+
+## Data Import & Configure
+
+```{r}
+# Data Import
+setwd("/Users/zuaibshaikh/Desktop/SEM 3/Time Series Analysis/Final Project")
+df <- read.csv("USA Beer production.csv")
+head(df)
+```
+
+## Converting data frame into time series data.
+```{r}
+# Time Series Conversion
+df_TS <- ts(as.vector(df$beerproductionusa), start = 1970, end = 1977, frequency = 12)
+time(df_TS)
+
+```
+# Descriptive Analysis
+
+## Time series Plot
+
+```{r}
+# TS Plot
+plot(window(df_TS,start=c(1970,1)),ylab='Beer Production',
+     main=" Figure 1. Time series Plot of Beer Production")
+```
+
+```{r}
+plot(df_TS, type = "o", xlab="Year", ylab="Beer Production",
+     main="Figure 2. Change in Beer production from 1970 to 1977")
+```
+### Analysis & Interpretation
+
+* Trend- The production of beer is increasing over time and the figure clearly follows an upward trend.
+
+* Seasonality - A repeating cycle or pattern can be observed from the plot hence it can be inferred that figure/data do have the presence of seasonality.
+
+* Behaviour- The Presence of Auto-Regressive and moving average behaviour is observed.
+
+* Changing Variance - A change in variance is present.
+
+* Intervention Points- No major Intervention points are observed from the data.
+
+
+## Correlation- Neighboring beer production values.
+
+```{r}
+# Pearson's Coefficient and correlation scatter plot
+y = df_TS
+x = zlag(df_TS)
+index = 2:length(x)
+cor(y[index], x[index])
+```
+### Interpretation
+
+* The correlation factor is always between -1 to 1. We find correlation factor equal to 0.7909 i.e. a strong positive correlation is present. This states that, there is a significant impact of previous year's beer production on the next year's beer production.
+
+## Scatter Plot
+
+```{r}
+#Scatter Plot
+plot(y = df_TS, x = zlag(df_TS),ylab="Beer Production",
+     xlab="Beer Production in the previous year", 
+     main="Figure 3. Scatter plot to show the autocorrelation 
+     between Beer production of previous year and current year")
+```
+### Interpretation
+
+* The scatter plot also exhibits a clear strong positive correlation between the production of beer in consecutive years, there is no presence of unusual points that can affect the relationship. A strong correlation is confirmed.
+
+
+### ACF and PACF Plot
+
+```{r}
+
+par(mfrow=c(1,2))
+acf(df_TS, main = "Figure 4. ACF plot of the Beer production time series")
+pacf(df_TS, main = "Figure 5. PACF plot of the Beer production time series")
+par(mfrow=c(1,1))
+
+```
+
+### Interpretation
+
+* In the ACF Plot, we can see strong correlations between the elements of the time series. The lags present are correlations of the observations with the observations of previous time stamps. In the ACF plot, we can see lags at 12,24,36..., from which we can conclude thatthere is a presence of Seasonality in the time series data.
+
+* The PACF plot states the partial autocorrelation between the series and and it's lags. 
+
+
+## ACF for monthly beer production.
+
+```{r}
+acf(df_TS, lag.max = 100, main="Figure 6.  ACF for the monthly beer production.")
+
+```
+
+## PACF for monthly beer production.
+
+```{r}
+pacf(df_TS, lag.max = 100, main="Figure 7. PACF for the monthly beer production.")
+
+```
+### Observation & Interpretation
+
+* Auto Correlation - The ACF function clearly depicts that the series is not white noise, as significant lags are observed in the series and we can say that there exists a significant dependence in the stochastic component. In the ACF plot, we can see lags at 12,24,36..., from which we can conclude there is a presence of Seasonality in the time series data.
+
+* A strong correlation can be observed in the PACF plot, a slow decaying pattern is also observed using the ACF plot, these observation signals towards the presence of a trend and non-stationarity.
+
+
+## ADF- (Dickey-Fuller Unit Root Test)
+```{r}
+#Hypothesis Test (ADF)
+par(mfrow=c(1,1))
+adf.test(df_TS, alternative = c("stationary"))
+```
+### Interpretation
+
+From the above output, it can be noted that the p-value is 0.01 which is less than 0.05, hence it can be said that series is stationary at a 5% level of significance.
+
+As there is an obvious change in variance, transformation Techniques should be used in order to remove the variance present in the data.
+
+
+
+# Boxcox Transformation.
+
+### Interpretation
+
+* A boxcox transformation is used when the variance changes with time. This transformation is used to make the data stationary by specifying a particular value of lambda. 
+
+```{r}
+# Box-cox Transformation
+df_TS_BC = BoxCox.ar(df_TS) 
+title(main ='Figure 8. Lambda values & Log Likelihood')
+```
+```{r}
+# Confidence Interval
+df_TS_BC$ci
+lambda = df_TS_BC$lambda[which(max(df_TS_BC$loglike) == df_TS_BC$loglike)]
+lambda
+```
+
+### Interpretation
+
+* The confidence intervals after applying boxcox transformation are -0.5 and 1.6. We find the value of lambda by applying medain function on the confidence intervals.
+
+
+```{r}
+# Transformed Data
+# Mid valve of CI
+lambda = 0.6
+# Box-Cox data
+df_TS_BC = (df_TS^lambda-1)/lambda
+```
+
+## Time Series Plot Of Box-Cox Transformed Data
+```{r}
+# TS Plot
+plot(df_TS_BC, type = "o", xlab="Year", ylab="Beer Production",
+     main="Figure 9. Change in Beer production from 1970 to 1977(Box-Cox)")
+```
+
+## Quantile-Quantile Plot of Box-Cox Transformed Data
+
+```{r}
+# QQ Plot
+qqnorm(df_TS_BC, main ='Figure 10. Box-Cox Transformation- QQ plot') 
+qqline(df_TS_BC, col = 2)
+```
+
+## ACF Plot of Box-Cox Transformed Data
+
+```{r}
+#ACF Plot
+acf(df_TS_BC, lag.max = 100, main=" Figure 11. ACF for the monthly beer production.")
+```
+
+## PACF after boxcox transformation.
+
+```{r}
+#PACF
+pacf(df_TS_BC, lag.max = 100, main="Figure 12. PACF for the monthly beer production.")
+```
+
+### Observation & Interpretations
+* Upon checking the confidence interval and setting the midpoint of the confidence interval as lambda, the data is transformed (Box-Cox).
+
+* Time series plot of the transformed data does not show any decrease in the variation.
+
+* In the QQ plot, the tail of the QQ line is deviating from the normality.
+
+* The ACF & PACF plots do not show any major effect of transformation, the trend and seasonality are still the same, the presence of auto-correlation can be clearly seen from the outputs.
+
+Considering all the above observations it is clear that Box-Cox Transformation was not successful in order to improve the data.
+
+Let's Try classical differencing techniques.
+
+
+# Model Specification:
+
+# Classical approach.
+
+# First difference: d=1
+
+```{r}
+# First Ordinary Difference
+df_TS.diff = diff(df_TS_BC)
+```
+
+## Time Series Plot After First Difference d=1
+
+```{r}
+#TS Plot
+
+plot(df_TS.diff,ylab='First Difference of Beer Production',xlab='Time',main = "Figure 13. T.S plot of the first differences of Beer Production units.")
+```
+## Quantile-Quantile Plot of Box-Cox Transformed Data
+
+```{r}
+
+# QQ Plot
+qqnorm(df_TS.diff, main ='Figure 14. First Difference Transformation- QQ plot') 
+qqline(df_TS.diff, col = 2)
+```
+
+
+## ACF Plot of After First Difference d=1.
+
+```{r}
+#ACF(1st Ordinary Differencing)
+
+acf(df_TS.diff,lag.max=100,main="Figure 15. ACF of the first differences of Beer production units")
+
+```
+
+## PACF Plot of After First Difference d=1.
+
+```{r}
+#PACF(1st Ordinary Differencing)
+
+pacf(df_TS.diff,lag.max=100,main="Figure 16. PACF of the first differences
+     of Beer production units")
+
+```
+
+
+### Observation & Interpretation
+
+* Time series plot of the transformed data shows that the trend is however reduced but the presence of seasonality is still there.
+
+* In the QQ plot of the data after first difference has also improved and moving towards normality.
+
+* Looking at the ACF and PACF plots it can be said that the presence of trend is faded a bit but the decaying pattern is still there, hence the seasonality is still present.
+
+Considering all the above observations it can be said that with the help of 1st differencing Transformation there is a minor improvement in the data but we have not achieved the desired  results as the presence of seasonality is yet to be dealt with.
+
+Let's try second classical approach, i.e 1st ordinary differencing and 1st seasonal differencing.
+
+
+
+# One Ordinary Difference And One Seasonal Difference: D=1, d=1.
+
+```{r}
+# D=1 & d=1
+
+df_TS.diff.Diff = diff(df_TS.diff, lag=12)
+```
+
+## Time Series Plot After One Ordinary and One Seasonal Difference
+```{r}
+# TS Plot
+
+plot(df_TS.diff.Diff,ylab='One ordinary diff & one seasonal diff',xlab='Time',main = "Figure 17. T.S plot with one ordinary diff & one seasonal diff.")
+```
+
+## Q-Q Plot After One Ordinary and One Seasonal Difference
+```{r}
+# QQ Plot
+qqnorm(df_TS.diff.Diff, main ='Figure 18. d=1 & D=1 Transformation- QQ plot') 
+qqline(df_TS.diff.Diff, col = 2)
+```
+
+
+## ACF After One Ordinary Difference & One Seasonal Difference. D=1,d=1
+
+```{r}
+# ACF Plot
+
+acf(df_TS.diff.Diff,lag.max=100,main="Figure 19. ACF of the first ordinary difference
+    and one seasonal difference of Beer production units")
+```
+
+## PACF, One Ordinary Difference & One Seasonal Difference. D=1, d=1
+
+```{r}
+#PACF
+
+pacf(df_TS.diff.Diff,lag.max=100,main="Figure 20. ACF of the first ordinary difference
+     and one seasonal difference of Beer production units")
+```
+
+### Observation & Interpretation
+
+* Time series plot of the transformed data do not have any signs of trend as well as the seasonality is almost zero.
+
+* The QQ plot of the data is also looking good, there are only three point deviating from the qq line.
+
+* Looking at the ACF and PACF plots it can be said that the seasonality is almost gone from the data.
+
+Considering all the above observations it can be said that with the help of 1st ordinary and 1st seasonal differencing Transformation we almost got rid of the seasonality and have achieved the desired results.
+
+From the above ACF and PACF plots of 1 ordinary difference and 1 seasonal difference, we have
+
+d = 1            D = 1
+p = 1,2,3,4      P = 0
+q = 1            Q = 0
+
+Therefore, the SARIMA models are:
+
+SARIMA(1,1,1) x (0,1,0)_12
+SARIMA(2,1,1) x (0,1,0)_12
+SARIMA(3,1,1) x (0,1,0)_12
+SARIMA(4,1,1) x (0,1,0)_12
+
+
+# Residual approach.
+
+## Overview
+
+Through residual approach, time series, ACF and PACF plots are displayed. 
+There was seasonality and a trend present in the time series, which was observed in the classical approach.  
+
+## Model1.
+
+```{r}
+# TS Plot
+m1.temp = arima(df_TS_BC,order=c(0,0,0),
+seasonal=list(order=c(0,1,0), period=12))
+res.m1 = rstandard(m1.temp)
+plot(res.m1,xlab='Time',ylab='Residuals',
+main="Figure 21. Time series plot of the residuals.")
+```
+
+
+```{r}
+#ACF Plot
+acf(res.m1, lag.max = 100, main = "Figure 22. ACF for m1 residual")
+```
+
+* From the above model, we get q=1
+
+```{r}
+pacf(res.m1, lag.max = 100, main = "Figure 23. PACF for m1 residual")
+```
+
+### Observation and Interpretation
+
+* We fit a SARIMA(0,0,0) x (0,1,0)_12 model. We displayed ACF & PACF plots of the residuals.
+
+* In Figure 10, we can see time series plot with seasonal difference (D=1). We can see the trend has disappeared when differencing is applied however, there is a small presence of seasonality.
+
+* When we look at the ACF and PACF plots, it is seen that the presence of trend has decreased and a decaying pattern is visible. Hence the seasonality is still present.
+
+* After considering all the plots, we can say that, applying first seasonal difference, a small improvement can be seen in the plots.
+
+* From the above model, we get p=1 and q=1. Now, we place these values in model 2.
+
+
+## Model 2.
+
+```{r}
+
+m2.temp = arima(df_TS_BC,order=c(1,0,1),
+seasonal=list(order=c(0,1,0), period=12))
+res.m2 = rstandard(m2.temp)
+plot(res.m2,xlab='Time',ylab='Residuals',
+main="Figure 24. Time series plot of the residuals.")
+
+```
+
+
+```{r}
+
+acf(res.m2, lag.max = 100, main = "Figure 25. ACF for m2 residual")
+
+```
+
+
+```{r}
+pacf(res.m2, lag.max = 100, main = "Figure 26. PACF for m2 residual")
+
+```
+
+### Observation and Interpretation
+
+* We fit a SARIMA(1,0,1) x (0,1,0)_12 model and display ACF & PACF plots of the residuals.
+
+* We can see the time series plot with seasonal difference (D=1) and values of 'p' and 'q' equal to one respectively. We can see the trend has disappeared when we applied first seasonal difference, however, a little presence of seasonality is seen.
+
+* When we look at the ACF and PACF plots, we can see the presence of trend has decreased and a decaying pattern is seen. Hence, a presence of seasonality is still seen.
+
+* After considering all the plots, it is seen that after applying first seasonal difference and taking the value of 'p' and 'q' equal to 1, a decrease in seasonality and a decaying pattern is seen. However, further improvement is needed in the plot.
+
+* From the above ACF & PACF plots, we get q=1 and p=1 respectively. We place these values in model 3.
+
+
+# Model 3.
+
+* We place values of p=1, q=1 in model 3. Also, we will take one ordinary difference (d=1)
+
+
+```{r}
+m3.temp = arima(df_TS_BC,order=c(1,1,1),
+seasonal=list(order=c(0,1,0), period=12))
+res.m3 = rstandard(m3.temp)
+plot(res.m3,xlab='Time',ylab='Residuals',
+main="Figure 27. Time series plot of the residuals.")
+```
+
+
+```{r}
+
+acf(res.m3, lag.max = 100, main = "Figure 28. ACF for m3 residual")
+
+```
+
+
+```{r}
+pacf(res.m3, lag.max = 100, main = "Figure 29. PACF for m3 residual")
+```
+
+### Observation and Interpretation
+
+* We fit a SARIMA(1,1,1) x (0,1,0)_12 model and display ACF & PACF plots of the residuals.
+
+* In Figure 16, we can see the time series plot with Seasonal difference (D=1) and Ordinary difference (d=1) and values of 'p' and 'q' are equal to one respectively. We can see the trend has disappeared and the seasonality also has fairly decreased.
+
+* When we look at the ACF and PACF plots, a presence of trend is not seen and a decaying pattern is visible.
+
+* After considering all the plots, it is seen that, after applying first seasonal difference and first ordinary difference, seasonality has fairly reduced and the trend is not visible.
+
+* From the above ACF & PACF plots, we get q=0 and p=0 respectively.
+
+* From the above analysis, the model we found best is: SARIMA(1,1,1) x (0,1,0)_12
+
+
+## EACF
+
+* ACF and PACF plots are effective to identify MA(q) and AR(p) models. However, when it comes to ARMA and ARIMA models, theoretical ACF and PACF plots have infinitely many non-zero values. Hence, it becomes difficult to identify mixed models from sample ACF & PACF plots.
+
+* EACF method is used to identify the order of Auto-regressive and Moving Average components of ARMA or ARIMA models.
+
+* EACF method filters out AR components from ARMA or ARIMA models. This results in pure MA(q) or IMA(q,d) processes. It enjoys the cutoff property in its ACF plots.
+
+```{r}
+eacf(res.m3)
+```
+
+### Observation and Interpretation
+
+* The upper left corner of the EACF (zeros) corresponds to AR(1) and MA(1) components.
+
+The possible models from the eacf are:
+
+SARIMA(0,1,0) x (0,1,0)_12
+SARIMA(0,1,1) x (0,1,0)_12
+SARIMA(1,1,1) x (0,1,0)_12
+
+## Analysing BIC table:
+
+* In the figure below, each shaded area of the row of BIC table corresponds to a set of ARMA model.
+
+* The models are sorted according to the BIC score. The model with smallest BIC score is considered as the best model.
+
+```{r warning=FALSE}
+
+res = armasubsets(y=res.m3 , nar=5 , nma=5, y.name='test', ar.method='ols')
+plot(res)
+
+```
+
+### Observation and Interpretation
+
+* Model with smallest BIC score contains error lag 4. Hence, a model containing error lag 4 will be considered as the best model.
+
+* Second best model contains lags 2 of time series and error lag 4. Hence, a model containing time series lag 2 and error lag 4 will be considered as the second best model.
+
+* Here:
+p=4  q=0
+p=4  q=2
+
+The possible set of models from BIC table are:
+
+SARIMA(4,1,0) x (0,1,0)_12
+SARIMA(4,1,2) x (0,1,0)_12
+
+## All models.
+
+Overall, models from residual approach are:
+SARIMA(1,1,1) x (0,1,0)_12
+SARIMA(0,1,0) x (0,1,0)_12
+SARIMA(0,1,1) x (0,1,0)_12
+SARIMA(1,1,1) x (0,1,0)_12
+SARIMA(4,1,0) x (0,1,0)_12
+SARIMA(4,1,2) x (0,1,0)_12
+
+Models from classical approach:
+SARIMA(1,1,1) x (0,1,0)_12
+SARIMA(2,1,1) x (0,1,0)_12
+SARIMA(3,1,1) x (0,1,0)_12
+SARIMA(4,1,1) x (0,1,0)_12
+
+
+## Model Fitting.
+
+* In model fitting, we fit the above models for parameter estimation.
+
+* We use the Maximum Likelihood (ML), Conditional Sum of Squares (CSS) and difference of Conditional Sum of Squares & Maximum Likelihood (CSS-ML).
+
+```{r}
+m1.temp.ML <-arima(df_TS_BC,order=c(1,1,1),seasonal=list(order=c(0,1,0),
+                                      period=12),method = "ML")
+
+m1.tempCSS <-arima(df_TS_BC,order=c(1,1,1),seasonal=list(order=c(0,1,0),period=12),method = "CSS")
+
+m1.temp.CSS.ML = Arima(df_TS, order=c(1,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+
+coeftest(m1.temp.ML)
+coeftest(m1.tempCSS)
+coeftest(m1.temp.CSS.ML)
+```
+
+* In the above model, we can see the parameters of MA1 models are significant as the Pr(>|z|) is less than 0.05.
+
+```{r}
+m3.temp.ML = Arima(df_TS, order=c(0,1,1), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m3.tempCSS = Arima(df_TS, order=c(0,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m3.temp.CSS.ML = Arima(df_TS, order=c(0,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m3.temp.ML)
+coeftest(m3.tempCSS)
+coeftest(m3.temp.CSS.ML)
+```
+
+* In the above model, we can see the parameters of MA1 models are siginificant as the Pr(>|z|) is less than 0.05.
+
+```{r}
+m4.temp.ML = Arima(df_TS, order=c(1,1,1), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m4.tempCSS = Arima(df_TS, order=c(1,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m4.temp.CSS.ML = Arima(df_TS, order=c(1,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m4.temp.ML)
+coeftest(m4.tempCSS)
+coeftest(m4.temp.CSS.ML)
+```
+
+* In the above model, we can see the parameters of MA1 models are siginificant as the Pr(>|z|) is less than 0.05.
+
+```{r}
+m5.temp.ML = Arima(df_TS, order=c(4,1,0), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m5.tempCSS = Arima(df_TS, order=c(4,1,0), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m5.temp.CSS.ML = Arima(df_TS, order=c(4,1,0), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m5.temp.ML)
+coeftest(m5.tempCSS)
+coeftest(m5.temp.CSS.ML)
+```
+
+* From the above models, we find that the models obtained from Maximum Likelihood method, models AR1, AR2 and AR4 are significant as their Pr(>|z|) is less than 0.05
+
+* In the models obtained from Conditional sum of squares method, all the models AR1, AR2, AR3 and AR4 are significant as their Pr(>|z|) is less than 0.05
+
+* The models AR1, AR2 and AR4 obtained from the difference of Conditional Sum of Squares and Maximum Likelihood are significant as the parameters of these models are less than 0.05
+
+
+```{r}
+m6.temp.ML = Arima(df_TS, order=c(4,1,2), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m6.tempCSS = Arima(df_TS, order=c(4,1,2), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m6.temp.CSS.ML = Arima(df_TS, order=c(4,1,2), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m6.temp.ML)
+coeftest(m6.tempCSS)
+coeftest(m6.temp.CSS.ML)
+
+```
+
+* From the above models, we find that the models obtained from Maximum Likelihood method (models AR4, MA1 and MA2) are significant as their Pr(>|z|) is less than 0.05
+
+* From the method Conditional sum of squares, model AR4 is the only significant model. 
+
+* From the method Conditional Sum of Squares, models AR4, MA1 and MA2 are significant as their Pr(>|z|) is less than 0.05
+
+```{r}
+m7.temp.ML = Arima(df_TS, order=c(2,1,1), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m7.tempCSS = Arima(df_TS, order=c(2,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m7.temp.CSS.ML = Arima(df_TS, order=c(2,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m7.temp.ML)
+coeftest(m7.tempCSS)
+coeftest(m7.temp.CSS.ML)
+```
+
+* From the above models, we find that the models obtained from Maximum Likelihood, Conditional Sum of Squares and difference of CSS-ML methods, MA1 model is the only significant model, as its Pr(>|z|) is less than 0.05
+
+
+```{r}
+m8.temp.ML = Arima(df_TS, order=c(3,1,1), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m8.tempCSS = Arima(df_TS, order=c(3,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m8.temp.CSS.ML = Arima(df_TS, order=c(3,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m8.temp.ML)
+coeftest(m8.tempCSS)
+coeftest(m8.temp.CSS.ML)
+```
+
+* From the above models, we find that the models obtained from Maximum Likelihood, Conditional Sum of Squares and difference of CSS-ML methods, MA1 model is the only significant model, as its Pr(>|z|) is less than 0.05
+
+
+```{r}
+m9.temp.ML = Arima(df_TS, order=c(4,1,1), seasonal=list(order=c(0,1,0), period=12),method = "ML")
+m9.tempCSS = Arima(df_TS, order=c(4,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS")
+m9.temp.CSS.ML = Arima(df_TS, order=c(4,1,1), seasonal=list(order=c(0,1,0), period=12),method = "CSS-ML")
+coeftest(m9.temp.ML)
+coeftest(m9.tempCSS)
+coeftest(m9.temp.CSS.ML)
+```
+
+* From the above models, we find that the models obtained from Maximum Likelihood, Conditional Sum of Squares and difference of CSS-ML methods, models AR4 and MA1 are the only significant models, as their Pr(>|z|) is less than 0.05
+
+
+* Now from the above analysis, we have the following information:
+
+
+|  Models   | Significant   p,q,P,Q  | Insignificant   p,q,P,Q  | Difference |
+|:---------:|:----------------------:|:------------------------:|:----------:|
+| m1.ML     |            1           |             1            |      0     |
+| m1.CSS    |            1           |             1            |      0     |
+| m1.CSS-ML |            1           |             1            |      0     |                     
+| m3.ML     |            1           |             0            |      1     |
+| m3.CSS    |            1           |             0            |      1     |
+| m3.CSS-ML |            1           |             0            |      1     |
+| m4.ML     |            1           |             1            |      0     |
+| m4.CSS    |            1           |             1            |      0     |
+| m4.CSS-ML |            1           |             1            |      0     |
+| m5.ML     |            3           |             1            |      2     |
+| m5.CSS    |            4           |             0            |      4     |
+| m5.CSS-ML |            3           |             1            |      2     |
+| m6.ML     |            2           |             1            |      1     |
+| m6.CSS    |            2           |             1            |      1     |
+| m6.CSS-ML |            2           |             1            |      1     |
+| m7.ML     |            1           |             2            |     -1     |
+| m7.CSS    |            1           |             2            |     -1     |
+| m7.CSS-ML |            1           |             2            |     -1     |
+| m8.ML     |            1           |             3            |     -2     |
+| m8.CSS    |            1           |             3            |     -2     |
+| m8.CSS-ML |            1           |             3            |     -2     |
+| m9.ML     |            2           |             3            |     -1     |
+| m9.CSS    |            2           |             3            |     -1     |
+| m9.CSS-ML |            2           |             3            |     -1     |
+
+
+* From the above table, it is clear that m5.CSS has the highest significant values followed by m5.ML and m5.CSS-ML . 
+
+* Now, performing the residual analysis for the above models.
+
+```{r}
+LBQPlot <- function(e, lagNumber)
+{
+  pValue <- rep(0, lagNumber)
+  for(j in 0:lagNumber){
+    pValue[j] <- Box.test(e, lag = j, type = "Ljung-Box", fitdf = 0)$p.value
+  }
+  plot(pValue, ylim = c(0,1), type = "n", ylab = "P-values", xlab = "Lags", main = "Ljung Box Test")
+  points(pValue)
+  abline(h = 0.05, col = "red", lty = "dotted")
+}
+
+
+residual_analysis_stochastic <- function(model) {
+
+par(mfrow=c(3,2))
+  
+st.res = rstandard(model)
+plot(st.res,xlab='Time', type = "o", ylab='Standardised Residuals', main="Time series plot of residuals")
+
+hist(st.res)
+qqnorm(st.res)
+qqline(st.res, col = 2)
+
+acf(st.res, lag.max = 48, main = "ACF of the residuals.")
+pacf(st.res, lag.max = 48, main = "PACF of the residuals.")
+
+LBQPlot(st.res, 30)
+
+par(mfrow=c(1,1))
+return(shapiro.test(st.res))
+}
+```
+
+# Residual Plots For All Models by all three methods:
+
+## m1 Model
+
+```{r}
+residual_analysis_stochastic(m1.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m1.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m1.temp.CSS.ML)
+```
+
+## m3 Model
+
+```{r}
+residual_analysis_stochastic(m3.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m3.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m3.temp.CSS.ML)
+```
+
+## m4 Model
+
+```{r}
+residual_analysis_stochastic(m4.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m4.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m4.temp.CSS.ML)
+```
+
+## m5 Model
+
+```{r}
+residual_analysis_stochastic(m5.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m5.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m5.temp.CSS.ML)
+```
+
+## m6 Model
+
+```{r}
+residual_analysis_stochastic(m6.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m6.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m6.temp.CSS.ML)
+```
+
+## m7 Model
+
+```{r}
+residual_analysis_stochastic(m7.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m7.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m7.temp.CSS.ML)
+```
+
+## m8 Model
+
+```{r}
+residual_analysis_stochastic(m8.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m8.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m8.temp.CSS.ML)
+```
+
+## m9 Model
+
+```{r}
+residual_analysis_stochastic(m9.tempCSS)
+```
+```{r}
+residual_analysis_stochastic(m9.temp.ML)
+```
+
+```{r}
+residual_analysis_stochastic(m9.temp.CSS.ML)
+```
+
+Above plots represents the residual analysis of all the obtained models using three different methods.
+Moving further lets analyse and interpret the best models among all above plots.
+
+# Resuidal Plots and observations of two best models (m1 & m5 Model)
+
+## m5 Model
+```{r}
+residual_analysis_stochastic(m5.tempCSS)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point during the year 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality and has only one outlier.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits two error lags.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is less than 0.05. Hence, we reject the hypothesis that there is no normality of residuals.
+
+
+
+```{r}
+residual_analysis_stochastic(m5.temp.ML)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point between the years 1973 & 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality and has only one outlier.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits one error lag.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is greater than 0.05. Hence, we do not reject normality of residuals.
+
+
+```{r}
+residual_analysis_stochastic(m5.temp.CSS.ML)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point between the years 1973 & 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality and has only one outlier.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits one error lag.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is greater than 0.05. Hence, we do not reject normality of residuals.
+
+## m1 Model
+
+```{r}
+residual_analysis_stochastic(m1.temp.ML)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point between the years 1973 & 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits no error lags.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is greater than 0.05. Hence, we do not reject normality of residuals.
+
+
+```{r}
+residual_analysis_stochastic(m1.tempCSS)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point between the years 1973 & 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits no error lags.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is greater than 0.05. Hence, we do not reject normality of residuals.
+
+
+```{r}
+residual_analysis_stochastic(m1.temp.CSS.ML)
+```
+
+* Time series plot - In the time series plot, we cannot see any trend however, there is an intervention point between the years 1973 & 1974.
+
+* Histogram of the residuals is normally distributed and symmetric
+
+* The Normal Q-Q plot exhibits normality.
+
+* There is a presence of white noise in ACF plot.
+
+* The PACF plot exhibits one error lag.
+
+* Ljung Box Test - As per the result all the points lie above the reference line which is a good indication for the model and confirms that the model do not show any lag of fit.
+
+* From the shapiro-wilk test, we find the p_value is greater than 0.05. Hence, we do not reject normality of residuals.
+
+
+* So, here we took the best 3 models based on significance level. From which the best 2 models which appeared after residual analysis are m5.temp.ML and m5.temp.CSS.ML
+
+##  AIC and BIC values of the above models.
+
+```{r}
+sort.score <- function(x, score = c("bic", "aic")){
+  if (score == "aic"){
+    x[with(x, order(AIC)),]
+  } else if (score == "bic") {
+    x[with(x, order(BIC)),]
+  } else {
+    warning('score = "x" only accepts valid arguments ("aic","bic")')
+  }
+}
+
+```
+
+```{r}
+sort.score(AIC(m1.temp.ML, m1.temp.CSS.ML,
+               m3.temp.ML, m3.temp.CSS.ML,
+               m4.temp.ML, m4.temp.CSS.ML,
+               m5.temp.ML, m5.temp.CSS.ML,
+               m6.temp.ML, m6.temp.CSS.ML,
+               m7.temp.ML, m7.temp.CSS.ML,
+               m8.temp.ML, m8.temp.CSS.ML,
+               m9.temp.ML, m9.temp.CSS.ML), score = "aic")
+```
+
+```{r}
+sort.score(BIC(m1.temp.ML, m1.temp.CSS.ML,
+               m3.temp.ML, m3.temp.CSS.ML,
+               m4.temp.ML, m4.temp.CSS.ML,
+               m5.temp.ML, m5.temp.CSS.ML,
+               m6.temp.ML, m6.temp.CSS.ML,
+               m7.temp.ML, m7.temp.CSS.ML,
+               m8.temp.ML, m8.temp.CSS.ML,
+               m9.temp.ML, m9.temp.CSS.ML),score ="bic")
+```
+* It can be confirmed from the above AIC-BIC table and model diagnosis that the best models out of all the models are m1 and m5.
+
+# Prediction:
+```{r}
+frc = forecast(m5.temp.CSS.ML, h=24)
+frc
+```
+
+* In the above steps, we used all the approaches, viz. Classical and Residual approaches to find the best fitting model.
+
+* We found SARIMA(4,1,0) x (0,1,0)_12 model from the residual approach as the best fitting model.
+
+* We will consider this model for the prediction of time series of next two years.
+
+* The figure below shows the prediction of United States beer production for the next two years. We can also see that the prediction limits are getting wider and wider as we go further with time because there is uncertainty in the prediction.
+
+```{r}
+plot(frc, main = " Figure 30. Forecast for the next 10 years (1977-1987)",
+     xlab = "Years", ylab = "Electric Production")
+```
+
+## Conclusion
+
+* We performed a time series analysis to observe interesting trends and patterns in the production of beer in the United States from the year 1970 to 1977. 
+
+* After performing all the necessary steps, we have predicted the production of beer in the United States for the next two years. 
+
+* In the prediction, we can see the limits are getting wider as there is uncertainty in the predictions. 
+
+* There is an upward trend in the predicted time series plot. This might be due to an increase in number of breweries, legalization of home production of beer, better storage facilities and other numerous reasons.
+
+
+## Summary
+
+* A Seasonal ARIMA was used to study and analyze the trends of beer production in the United States. This data depicted an upward trend and seasonality. To analyze such data, we cannot use a deterministic models. Deterministic models do not explain the seasonal behaviour of such a time series. A seasonal model works well with such time series. The residuals from the seasonal means plus linear time trend model are highly correlated at many lags. The following steps were taken to model the data:
+
+  * Descriptive Analysis
+
+  * Model Specification
+
+    * Classical Approach
+
+    * Residual Approach
+  
+  * Model Fitting
+
+  * Diagnostic Check/Residual Analysis
+
+  * Prediction/Forecasting
+
+
+## References:
+
+* time series | Rob J Hyndman. (2021). Retrieved 13 June 2021, from https://robjhyndman.com/categories/time-series/ 
+
+* Explore the data - CensusAtSchool New Zealand. (2021). Retrieved 10 June 2021, from https://new.censusatschool.org.nz/explore/
+
+
+
+
+
