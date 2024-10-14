@@ -1,7 +1,5 @@
 ---
 title: "Time series Project"
-author: "Group Conatus"
-date: "28/05/2021"
 output:
   html_document: default
   pdf_document: default
@@ -10,35 +8,6 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-# Project Team Members
-
-* Vishal Atrolia (s3825276)
-* Joheb Shaikh (s3823492)
-* Ashwin Menon (s3808190)
-* Tarun Kumar (s3810681)
-* Amit Bhagate (s3825490)
-
-# Introduction
-
-American brewing history has seen numerous ups and downs, from the much obvious reasons like Prohibition to less visible, but equally crucial reasons like the introduction of refrigeration, which completely transformed the process of breweries in the United States. The nature of beer as a beverage is temperamental, as unlike wine and spirits it can not be stored for a long period of time. Due to various other reasons, the production of beer in the US has seen a lot of fluctuations over the period of time.
-
-As per the statistics, beer production market has seen a great peek in the late 1800s. In 1871, the United States had 4131 operational breweries. Going through the dark period of Prohibition, the number of operational breweries in 1970 which came down to as low as 89 by just 42 companies.
-
-Starting from 1970 the Beer market in The US started to rise slowly again, this was due to various reasons like the legalization of home production of beer etc. With the help of this project, we will try to analyze the production of beer in the US from 1970 t0 1977.
-
-# Analysis & Approach
-
-With the help of statistics, we will perform a time series analysis to observe interesting trends and patterns in the production of beer in the United States from the year 1970 to 1977.
-
-We will start with analyzing the Time series plot of the data and try to find out the factors like seasonality, changing variance in the data, and, further, we will try to deal with these factors affecting the pattern/plot. Finally, we will try to fit a SARIMA model to the data with proper diagnosis and interpretation.
-
-
-# Data
-* Source of the data- The data is taken from Census At School New Zealand website supported by A-stats NZ and The University Of Auckland.
-
-  URL- https://new.censusatschool.org.nz/explore/
-
-* The data has 96 observations and 2 variables, out of which variable "beerproductionusa" is our main variable of interest and the other variable is a monthly indicator.
 
 # Initial Setup
 
@@ -83,18 +52,6 @@ plot(window(df_TS,start=c(1970,1)),ylab='Beer Production',
 plot(df_TS, type = "o", xlab="Year", ylab="Beer Production",
      main="Figure 2. Change in Beer production from 1970 to 1977")
 ```
-### Analysis & Interpretation
-
-* Trend- The production of beer is increasing over time and the figure clearly follows an upward trend.
-
-* Seasonality - A repeating cycle or pattern can be observed from the plot hence it can be inferred that figure/data do have the presence of seasonality.
-
-* Behaviour- The Presence of Auto-Regressive and moving average behaviour is observed.
-
-* Changing Variance - A change in variance is present.
-
-* Intervention Points- No major Intervention points are observed from the data.
-
 
 ## Correlation- Neighboring beer production values.
 
@@ -1031,41 +988,6 @@ plot(frc, main = " Figure 30. Forecast for the next 10 years (1977-1987)",
      xlab = "Years", ylab = "Electric Production")
 ```
 
-## Conclusion
-
-* We performed a time series analysis to observe interesting trends and patterns in the production of beer in the United States from the year 1970 to 1977. 
-
-* After performing all the necessary steps, we have predicted the production of beer in the United States for the next two years. 
-
-* In the prediction, we can see the limits are getting wider as there is uncertainty in the predictions. 
-
-* There is an upward trend in the predicted time series plot. This might be due to an increase in number of breweries, legalization of home production of beer, better storage facilities and other numerous reasons.
-
-
-## Summary
-
-* A Seasonal ARIMA was used to study and analyze the trends of beer production in the United States. This data depicted an upward trend and seasonality. To analyze such data, we cannot use a deterministic models. Deterministic models do not explain the seasonal behaviour of such a time series. A seasonal model works well with such time series. The residuals from the seasonal means plus linear time trend model are highly correlated at many lags. The following steps were taken to model the data:
-
-  * Descriptive Analysis
-
-  * Model Specification
-
-    * Classical Approach
-
-    * Residual Approach
-  
-  * Model Fitting
-
-  * Diagnostic Check/Residual Analysis
-
-  * Prediction/Forecasting
-
-
-## References:
-
-* time series | Rob J Hyndman. (2021). Retrieved 13 June 2021, from https://robjhyndman.com/categories/time-series/ 
-
-* Explore the data - CensusAtSchool New Zealand. (2021). Retrieved 10 June 2021, from https://new.censusatschool.org.nz/explore/
 
 
 
